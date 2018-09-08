@@ -34,6 +34,8 @@ import time
 #   我手里有什么牌
 #   我出了什么牌
 #   我管了什么牌
+#   现在是第几轮
+#   如果出了单或对子，其level比手牌level最小的牌高了多少，level的绝对值是多少，是不是最小的单或对子
 
 
 # 具体一些：
@@ -43,6 +45,7 @@ import time
 #   我手里有什么牌：54个参数，52个参数代表从3到2共13种牌每种牌的个数（从1到4共4种可能），2个参数代表有没有两种王
 #   我出了什么牌：许多个参数，分别代表每一种牌型
 #   我管了什么牌：许多个参数，分别代表每一种牌型
+#   现在是第几轮
 
 
 def card2level(card):
@@ -155,111 +158,126 @@ class cardCombo:
 
 
 def myAction(cards):
-    para5 = [0] * 32
+    para5 = [0] * 232
     myaction = cardCombo(cards)
+
+    #acc = 0
 
     # 过
     if myaction.combotype == "pass":
         para5[0] = 1
+        #acc += 1
 
     # 单张
     # 使用level的一次、两次和三次项
     if myaction.combotype == "single":
-        para5[1] = myaction.combolevel
-        para5[2] = myaction.combolevel ** 2
-        para5[3] = myaction.combolevel ** 3
+        para5[1+myaction.combolevel] = 1
+        #acc += 15
 
     # 对子
     # 使用level的一次、两次和三次项
     if myaction.combotype == "pair":
-        para5[4] = myaction.combolevel
-        para5[5] = myaction.combolevel ** 2
-        para5[6] = myaction.combolevel ** 3
+        para5[16+myaction.combolevel] = 1
+        #acc += 15
 
     # 顺子
-    # 使用顺子起点的level、长度以及交叉项
+    # 顺子起点的level有[0-7]共8种，终点有[4-11]共8种，共64种顺子
     if myaction.combotype == "straight":
-        para5[7] = myaction.combolevel
-        para5[8] = findMaxSeq(myaction.packs)
-        para5[9] = myaction.combolevel * findMaxSeq(myaction.packs)
+        end = myaction.combolevel + findMaxSeq(myaction.packs) - 1
+        para5[31+myaction.combolevel*8+end-4] = 1
+        #acc += 64
 
     # 双顺
     # 双顺和单顺作同样处理
     if myaction.combotype == "straight2":
-        para5[10] = myaction.combolevel
-        para5[11] = findMaxSeq(myaction.packs)
-        para5[12] = myaction.combolevel * findMaxSeq(myaction.packs)
+        end = myaction.combolevel + findMaxSeq(myaction.packs) - 1
+        para5[95+myaction.combolevel*8+end-4] = 1
+        #acc += 64
 
-    # 三条
-    # 因为纯三条比较少见，所以采用一次项和二次项
-    if myaction.combotype == "triplet":
-        para5[13] = myaction.combolevel
-        para5[14] = myaction.combolevel
+    # # 三条
+    # # 因为纯三条比较少见，所以采用一次项和二次项
+    # if myaction.combotype == "triplet":
+    #     para5[159] = myaction.combolevel
+    #     para5[160] = myaction.combolevel
+    #     #acc += 2
 
     # 三带一
-    # 采用三条和单张的一次项以及它们的交叉项
+    # 采用三条和单张的一次项
     if myaction.combotype == "triplet1":
-        para5[15] = myaction.packs[0].level
-        para5[16] = myaction.packs[1].level
-        para5[17] = myaction.packs[0].level * myaction.packs[1].level
+        para5[161+myaction.packs[0].level] = 1
+        #acc += 15
+        para5[176+myaction.packs[1].level] = 1
+        #acc += 15
 
     # 三带二
     # 与三带一类似
     if myaction.combotype == "triplet2":
-        para5[18] = myaction.packs[0].level
-        para5[19] = myaction.packs[1].level
-        para5[20] = myaction.packs[0].level * myaction.packs[1].level
+        para5[191+myaction.packs[0].level] = 1
+        #acc += 15
+        para5[206+myaction.packs[1].level] = 1
+        #acc += 15
 
     # 炸弹
     # 采用炸弹的一次项和二次项
     if myaction.combotype == "bomb":
-        para5[21] = myaction.combolevel
-        para5[22] = myaction.combolevel ** 2
+        para5[221] = myaction.combolevel
+        para5[222] = myaction.combolevel ** 2
+        #acc += 2
 
     # 四带二（只）
     # 以下都比较稀少，只采用一个有或没有
     if myaction.combotype == "quadruple2":
-        para5[23] = 1
+        para5[223] = 1
+        #acc += 1
 
     # 四带二（对）
     if myaction.combotype == "quadruple4":
-        para5[24] = 1
+        para5[224] = 1
+        #acc += 1
 
     # 飞机
     if myaction.combotype == "plane":
-        para5[25] = 1
+        para5[225] = 1
+        #acc += 1
 
     # 飞机带小翼
     if myaction.combotype == "plane1":
-        para5[26] = 1
+        para5[226] = 1
+        #acc += 1
 
     # 飞机带大翼
     if myaction.combotype == "plane2":
-        para5[27] = 1
+        para5[227] = 1
+        #acc += 1
 
     # 航天飞机
     if myaction.combotype == "sshuttle":
-        para5[28] = 1
+        para5[228] = 1
+        #acc += 1
 
     # 航天飞机带小翼
     if myaction.combotype == "sshuttle2":
-        para5[29] = 1
+        para5[229] = 1
+        #acc += 1
 
     # 航天飞机带大翼
     if myaction.combotype == "sshuttle4":
-        para5[30] = 1
+        para5[230] = 1
+        #acc += 1
 
     # 火箭
     if myaction.combotype == "rocket":
-        para5[31] = 1
+        para5[231] = 1
+        #acc += 1
 
     return para5
 
 
 def main(month, match):
-    path = "FightTheLandlord-2018-" + str(month) + "/" \
-           + str(match * 100 + 1) + "-" + str((match + 1) * 100) + ".matches"
-    result = open("data.txt", "ab")
+    # path = "../FightTheLandlord-2018-" + str(month) + "/" \
+    #        + str(match * 100 + 1) + "-" + str((match + 1) * 100) + ".matches"
+    path = "../4_改进/log.txt"
+    global result1, result2
     with open(path) as f:
         for line in f:
             s = json.loads(line)
@@ -270,7 +288,8 @@ def main(month, match):
                 continue
 
             player = 0
-            cards = json.loads(s["initdata"])["allocation"]
+            # cards = json.loads(s["initdata"])["allocation"]
+            cards = s["initdata"]["allocation"]
             for i in range(1, length, 2):
                 para1, para2, para3 = [0] * 3, [0], [0] * 18
 
@@ -295,30 +314,106 @@ def main(month, match):
                 para4 = cardAnalysis(cards[player])
 
                 try:
-                    para5 = myAction(s["log"][i][str(player)]["response"])
+                    response = s["log"][i][str(player)]["response"]
+                    para5 = myAction(response)
                 except ValueError:
                     player = (player + 1) % 3
                     continue
 
+                lastValid = []
+                history = s["log"][i - 1]["output"]["content"][str(player)]["history"]
+                howManyPass = 0
+                for p in [0, 1]:
+                    if len(history[p]) == 0:
+                        howManyPass += 1
+                    else:
+                        lastValid = history[p]
+                    if howManyPass == 2:
+                        lastValid = []
                 try:
-                    para6 = myAction(s["log"][i - 1]["output"]["content"][str(player)]["history"][0])
+                    para6 = myAction(lastValid)
                 except ValueError:
                     player = (player + 1) % 3
                     continue
 
-                for each in para2 + para1 + para3 + para4 + para5 + para6:
-                    result.write(bytes(str(each) + ",", encoding="utf8"))
-                result.write(bytes("\46\n", encoding="utf8"))
+                para7 = [(i+1) // 2]
+
+                para8 = [0] * 8
+                if cards[player]:
+                    minlevel = 20
+                    counts = [0] * 15
+                    Single, Pair = [], []
+                    for each in cards[player]:
+                        level = card2level(each)
+                        counts[level] += 1
+                        if level < minlevel:
+                            minlevel = level
+                    for i in range(0, 15):
+                        if counts[i] == 1:
+                            Single.append(i)
+                        elif counts[i] == 2:
+                            Pair.append(i)
+
+                    combo = cardCombo(response)
+                    sorted(cards[player])
+                    if combo.combotype == "single":
+                        para8[0] = combo.combolevel - minlevel + 1
+                        para8[1] = para8[0] ** 2
+                        if para6[0] == 1:
+                            if cards[player][0] == combo.combolevel:
+                                para8[2] = 1
+                        else:
+                            for each in Single:
+                                if card2level(each) < lastValid[0]:
+                                    Single.remove(each)
+                            if Single:
+                                if sorted(Single)[0] == combo.combolevel:
+                                    para8[2] = 1
+                        para8[3] = combo.combolevel
+                    elif combo.combotype == "pair":
+                        para8[4] = combo.combolevel - minlevel + 1
+                        para8[5] = para8[2] ** 2
+                        if para6[0] == 1:
+                            if cards[player][0] == combo.combolevel:
+                                para8[6] = 1
+                        else:
+                            for each in Pair:
+                                if card2level(each) < lastValid[0]:
+                                    Pair.remove(each)
+                            if Pair:
+                                if sorted(Pair)[0] == combo.combolevel:
+                                    para8[6] = 1
+                        para8[7] = combo.combolevel
+
+                if para6[0] == 0:   # 跟牌的数据写到data1.csv中
+                    for each in para2 + para1 + para3 + para4 + para5 + para6 + para7 + para8:
+                        result1.write(bytes(str(each) + ",", encoding="utf8"))
+                    result1.write(bytes("\n", encoding="utf8"))
+                else:               # 出牌的数据写到data2.csv中
+                # if para6[0] == 1:
+                    for each in para2 + para1 + para3 + para4 + para5 + para6 + para7 + para8:
+                        result2.write(bytes(str(each) + ",", encoding="utf8"))
+                    result2.write(bytes("\n", encoding="utf8"))
+
                 player = (player + 1) % 3
 
 
 if __name__ == '__main__':
     t0 = time.monotonic()
-    for i in range(0, 961):
-        t1 = time.monotonic()
-        print("正在读取 6 月的第", i, "个文件，用时", t1 - t0, "秒")
-        main(6, i)
-    for i in range(0, 640):
-        t1 = time.monotonic()
-        print("正在读取 7 月的第", i, "个文件，用时", t1 - t0, "秒")
-        main(7, i)
+    result1 = open("../3_决策/data/data1.csv", "wb")
+    result2 = open("../3_决策/data/data2.csv", "wb")
+    # for i in range(0, 961):
+    #     t1 = time.monotonic()
+    #     print("正在读取 6 月的第", i, "个文件，用时", t1 - t0, "秒")
+    #     main(6, i)
+    # for i in range(0, 640):
+    #     t1 = time.monotonic()
+    #     print("正在读取 7 月的第", i, "个文件，用时", t1 - t0, "秒")
+    #     main(7, i)
+    # for i in range(640, 680):
+    #     t1 = time.monotonic()
+    #     print("正在读取 6 月的第", i, "个文件，用时", t1 - t0, "秒")
+    #     main(6, i)
+    main(0, 0)
+    result1.close()
+    result2.close()

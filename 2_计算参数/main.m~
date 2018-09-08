@@ -2,17 +2,17 @@ clear ; close all; clc
 
 
 %% 初始化全局变量
-input_layer_size  = 540;
+input_layer_size  = 548;
 hidden_layer_size = 30;
 num_labels = 1;
 
 
-%% 初始化数据
-data = csvread("../data.csv");
+%% 载入数据
+data = csvread("../data/data2.csv");
 y = data(:, 1);
 X = data(:, 2:end-1);
 m = size(X, 1);
-fprintf("初始化数据完成\n")
+fprintf("载入数据完成\n")
 
 
 %% 初始化参数
@@ -46,21 +46,22 @@ fprintf('预测准确率: %f\n', mean(double(pred == y)) * 100);
 
 
 %% 存储结果
-f = fopen("../theta1.txt", "w");
-for i = 1:30
-    for j = 1:541
-        fprintf(f, "%f ", Theta1(i, j));
+f = fopen("../data/theta1_2.csv", "w");
+for i = 1:hidden_layer_size
+    for j = 1:input_layer_size + 1
+        fprintf(f, "%f,", Theta1(i, j));
     end
     fprintf(f, "\n");
 end
-f = fopen("../theta2.txt", "w");
-for i = 1:30
-    for j = 1:31
-        fprintf(f, "%f ", Theta2(i, j));
+f = fopen("../data/theta2_1.csv", "w");
+for i = 1:hidden_layer_size
+    for j = 1:hidden_layer_size + 1
+        fprintf(f, "%f,", Theta2(i, j));
     end
     fprintf(f, "\n");
 end
-f = fopen("../theta3.txt", "w");
-for i = 1:31
+f = fopen("../data/theta3_1.csv", "w");
+for i = 1:hidden_layer_size + 1
     fprintf(f, "%f\n", Theta3(1, i));
 end
+fprintf("存储结果完成\n");

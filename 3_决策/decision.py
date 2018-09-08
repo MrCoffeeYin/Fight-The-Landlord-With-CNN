@@ -3,6 +3,7 @@ import json
 import time
 import copy
 
+
 # 目标：选择在当前局面下能够最大程度提高赢的概率的出牌
 #
 # 过程：
@@ -25,6 +26,14 @@ import copy
 # 输入：我准备出什么牌
 # 输出：出完牌后赢的概率
 # 计算中输入的参数应该是模拟出完牌之后的！
+
+# para1: 我是谁
+# para3: 各方手里有多少牌
+# para4: 出完之后我手里剩什么牌
+# para5: 出了什么牌
+# para6: 管了什么牌
+# para7: 现在是第几回合
+# para8: 对出单张和出对子的调整
 
 
 # 准备数据
@@ -59,26 +68,6 @@ for action in full_input["responses"]:  # 还原我手里现在有的牌
     for card in action:
         myCard.remove(card)
     cardRemaining[myPosition] -= len(action)
-
-# 导入参数
-input_layer_size = 540
-hidden_layer_size = 30
-theta1 = np.empty((hidden_layer_size, input_layer_size + 1), dtype=np.double)
-with open("data/theta1.txt", "r") as f:
-    for i in range(0, theta1.shape[0]):
-        line = f.readline().split(" ")
-        for j in range(0, len(line) - 1):
-            theta1[i][j] = float(line[j])
-theta2 = np.empty((hidden_layer_size, hidden_layer_size + 1), dtype=np.double)
-with open("data/theta2.txt", "r") as f:
-    for i in range(0, theta2.shape[0]):
-        line = f.readline().split(" ")
-        for j in range(0, len(line) - 1):
-            theta2[i][j] = float(line[j])
-theta3 = np.empty((1, hidden_layer_size + 1), dtype=np.double)
-with open("data/theta3.txt", "r") as f:
-    for i in range(0, theta3.shape[0]):
-        theta3[i] = float(f.readline())
 
 
 def canBeat(combo1, combo2):
@@ -116,6 +105,10 @@ for i in range(0, 15):
         Triplet.append(i)
     elif counts[i] == 4:
         Bomb.append(i)
+minlevel = 20
+for each in myCard:
+    if card2level(each) < minlevel:
+        minlevel = card2level(each)
 
 
 def findSingle(myCard):
@@ -385,8 +378,8 @@ def findAllValid(myCard: list, lastValid: list):
         # for each in findSshuttle4(myCard):
         #     yield each
         # 尝试出带三条的
-        for each in findTriplet(myCard):
-            yield each
+        # for each in findTriplet(myCard):
+        #     yield each
         for each in findPlane(myCard):
             yield each
         for each in findTriplet1(myCard):
@@ -440,7 +433,8 @@ def findAllValid(myCard: list, lastValid: list):
                         if card2level(cards) in levels:
                             result.append(cards)
                             levels.remove(card2level(cards))
-                    yield result
+                    if canBeat(result, lastValid):
+                        yield result
         if lastValid.combotype == "straight2":
             length = len(lastValid.packs)
             for i in range(0, 13 - length):
@@ -456,7 +450,8 @@ def findAllValid(myCard: list, lastValid: list):
                         if card2level(cards) in levels:
                             result.append(cards)
                             levels.remove(card2level(cards))
-                    yield result
+                    if canBeat(result, lastValid):
+                        yield result
         if lastValid.combotype == "triplet":
             for each in findTriplet(myCard):
                 if canBeat(each, lastValid):
@@ -519,7 +514,7 @@ def findAllValid(myCard: list, lastValid: list):
 # 计算输入参数
 def calculatePara(cards):
     global para1, para6, para7
-    global myCard, cardRemaining
+    global myCard, cardRemaining, minlevel
     tempCard = copy.copy(myCard)
     tempCardRemaining = copy.copy(cardRemaining)
     for card in cards:
@@ -534,9 +529,49 @@ def calculatePara(cards):
         para3[9 + j] = para3[j] ** 2
 
     para4 = cardAnalysis(tempCard)
-    para5 = myAction(tempCard)
+    para5 = myAction(cards)
 
-    return np.array(para1 + para3 + para4 + para5 + para6 + para7)
+    para8 = [0] * 8
+    if cards:
+        minlevel = 20
+        for each in myCard:
+            level = card2level(each)
+            if level < minlevel:
+                minlevel = level
+        combo = cardCombo(tempCard)
+        if combo.combotype == "single":
+            para8[0] = combo.combolevel - minlevel + 1  # 出的牌是不是相对的小
+            para8[1] = para8[0] ** 2
+            if para6[0] == 1:   # 如果主动出牌，出的牌是不是最小
+                if Single:
+                    if sorted(Single)[0] == combo.combolevel:
+                        para8[2] = 1
+            else:               # 如果跟牌，出的牌是不是能管上的最小
+                tempSingle = copy.copy(Single)
+                for each in tempSingle:
+                    if card2level(each) < lastValid[0]:
+                        tempSingle.remove(each)
+                if tempSingle:
+                    if sorted(tempSingle)[0] == combo.combolevel:
+                        para8[2] = 1
+            para8[3] = combo.combolevel     # 出的牌是不是绝对的小
+        elif combo.combotype == "pair":
+            para8[4] = combo.combolevel - minlevel + 1
+            para8[5] = para8[2] ** 2
+            if para6[0] == 1:
+                if Pair:
+                    if sorted(Pair)[0] == combo.combolevel:
+                        para8[2] = 1
+            else:
+                tempPair = copy.copy(Pair)
+                for each in tempPair:
+                    if card2level(each) < lastValid[0]:
+                        tempPair.remove(each)
+                if tempPair:
+                    if sorted(tempPair)[0] == combo.combolevel:
+                        para8[6] = 1
+            para8[7] = combo.combolevel
+    return np.array(para1 + para3 + para4 + para5 + para6 + para7 + para8)
 
 
 # 计算sigmoid函数值
@@ -778,8 +813,42 @@ def myAction(cards):
 para1 = [0] * 3
 para1[myPosition] = 1
 para6 = myAction(lastValid)
-para7 = [turn]
+para7 = [turn * 3 - (2 - myPosition)]
 
+# 导入参数
+input_layer_size = 548
+hidden_layer_size = 30
+theta1 = np.empty((hidden_layer_size, input_layer_size + 1), dtype=np.double)
+theta2 = np.empty((hidden_layer_size, hidden_layer_size + 1), dtype=np.double)
+theta3 = np.empty((1, hidden_layer_size + 1), dtype=np.double)
+if lastValid:   # 跟牌
+    with open("data/theta1_1.csv", "r") as f:
+        for i in range(0, theta1.shape[0]):
+            line = f.readline().split(",")
+            for j in range(0, len(line) - 1):
+                theta1[i][j] = float(line[j])
+    with open("data/theta2_1.csv", "r") as f:
+        for i in range(0, theta2.shape[0]):
+            line = f.readline().split(",")
+            for j in range(0, len(line) - 1):
+                theta2[i][j] = float(line[j])
+    with open("data/theta3_1.csv", "r") as f:
+        for i in range(0, theta3.shape[1]):
+            theta3[0][i] = float(f.readline())
+else:   # 出牌
+    with open("data/theta1_2.csv", "r") as f:
+        for i in range(0, theta1.shape[0]):
+            line = f.readline().split(",")
+            for j in range(0, len(line) - 1):
+                theta1[i][j] = float(line[j])
+    with open("data/theta2_2.csv", "r") as f:
+        for i in range(0, theta2.shape[0]):
+            line = f.readline().split(",")
+            for j in range(0, len(line) - 1):
+                theta2[i][j] = float(line[j])
+    with open("data/theta3_2.csv", "r") as f:
+        for i in range(0, theta3.shape[1]):
+            theta3[0][i] = float(f.readline())
 
 # 迭代计算最优解
 pmax = 0
@@ -787,15 +856,14 @@ myOutput = []
 # print(myCard)
 # print(counts)
 for each in findAllValid(myCard, lastValid):
-    # print(each)
+    print(each)
     para = calculatePara(each)
     p_curr = calculateProb(para, theta1, theta2, theta3)
-    # print(p_curr)
+    print(p_curr)
     if p_curr > pmax:
         myOutput = copy.copy(each)
         pmax = p_curr
 
 print(json.dumps({"response": myOutput}))
-
 t1 = time.monotonic()
 # print(t1 - t0)
